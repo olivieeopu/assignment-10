@@ -1,5 +1,6 @@
 import streamlit as st
-import requests
+import boto3
+import json
 
 st.title("Spaceship Titanic Prediction")
 
@@ -18,7 +19,6 @@ ShoppingMall = st.number_input("ShoppingMall", 0.0)
 Spa = st.number_input("Spa", 0.0)
 VRDeck = st.number_input("VRDeck", 0.0)
 
-# PREDICT VIA API
 if st.button("Predict"):
     data = {
         "PassengerId": PassengerId,
@@ -37,17 +37,25 @@ if st.button("Predict"):
     }
 
     try:
-        response = requests.post(
-            "http://127.0.0.1:8000/predict",
-            json=data
+        runtime = boto3.client(
+            "sagemaker-runtime",
+            region_name="us-east-1"
         )
 
-        result = response.json()
+        response = runtime.invoke_endpoint(
+            EndpointName="spaceship-endpoint",
+            ContentType="application/json",
+            Body=json.dumps(data)
+        )
+
+        result = json.loads(
+            response["Body"].read().decode()
+        )
 
         if result["prediction"] == 1:
             st.success("Transported")
         else:
             st.error("Not Transported")
 
-    except:
-        st.error("errors")
+    except Exception as e:
+        st.error(f"Error: {str(e)}")
